@@ -89,6 +89,19 @@ class ControllerState:
         )
 
 
+def _scalar(value, default: float) -> float:
+    """Unwrap a `buttons_parser` analog value.
+
+    `oculus_reader`'s button parser reports single-value analog controls
+    (e.g. `leftGrip 0.53`) as a 1-element tuple `(0.53,)`, not a bare float.
+    """
+    if value is None:
+        return default
+    if isinstance(value, tuple):
+        return float(value[0])
+    return float(value)
+
+
 class QuestPoseSource(Protocol):
     """Interface shared by `QuestReader` and `MockQuestReader`."""
 
@@ -140,8 +153,8 @@ class QuestReader:
         return ControllerState(
             pos=pos,
             quat=quat,
-            grip=float(buttons.get(f"{side}Grip", 0.0)),
-            trigger=float(buttons.get(f"{side}Trig", 0.0)),
+            grip=_scalar(buttons.get(f"{side}Grip"), 0.0),
+            trigger=_scalar(buttons.get(f"{side}Trig"), 0.0),
             grip_pressed=bool(buttons.get(f"{prefix}G", False)),
             trigger_pressed=bool(buttons.get(f"{prefix}Tr", False)),
             valid=True,
