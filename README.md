@@ -20,7 +20,9 @@ uv sync
 
 ## VR teleoperation (Meta Quest)
 
-Control the simulated bimanual arms directly from a Meta Quest headset and controllers.
+Control the simulated bimanual arms directly from a Meta Quest headset and
+controllers. For step-by-step connection/run instructions, see
+[docs/quest-teleop-setup.md](docs/quest-teleop-setup.md).
 
 ### How it works
 
