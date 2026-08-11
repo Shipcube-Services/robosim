@@ -1,0 +1,28 @@
+[project]
+name = "robosim"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Dushyant Baweja", email = "me@dush.dev" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mujoco>=3.6.0",
+    "numpy",
+    "openarm_mujoco",
+    "oculus_reader",
+    "lerobot[pusht,evaluation]==0.6.1",
+]
+
+[project.scripts]
+robosim = "robosim:main"
+robosim-vr-teleop = "robosim.vr.teleop:main"
+
+[tool.uv.sources]
+openarm_mujoco = { path = "openarm_mujoco", editable = true }
+oculus_reader = { git = "https://github.com/rail-berkeley/oculus_reader.git" }
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"

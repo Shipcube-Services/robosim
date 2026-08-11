@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Vendored upstream repos (cloned separately; see README)
+/openarm_hardware/
+/openarm_mujoco/
+
+# Generated run artifacts
+/outputs/
+
+# OS
+.DS_Store
