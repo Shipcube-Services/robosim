@@ -18,11 +18,42 @@ rather than any other module (the clutch/IK logic is axis-agnostic).
 
 from __future__ import annotations
 
+import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 import mujoco
 import numpy as np
+
+# `oculus_reader` ships its Android app via Git LFS. `uv`'s git-dependency
+# fetcher does not run the LFS smudge filter, so the file installed at
+# <site-packages>/oculus_reader/APK/teleop-debug.apk is just an LFS pointer
+# (~130 bytes of text), not the real ~7.5MB APK -- regardless of whether
+# git-lfs is installed locally. GitHub still serves the real bytes over
+# plain HTTPS for public repos, so fetch them directly instead.
+_APK_LFS_MEDIA_URL = (
+    "https://media.githubusercontent.com/media/rail-berkeley/oculus_reader/"
+    "main/oculus_reader/APK/teleop-debug.apk"
+)
+_APK_ZIP_MAGIC = b"PK\x03\x04"
+
+
+def _ensure_real_apk() -> None:
+    import oculus_reader  # noqa: PLC0415
+
+    if oculus_reader.__file__ is None:
+        return
+    apk_path = Path(oculus_reader.__file__).parent / "APK" / "teleop-debug.apk"
+    if not apk_path.exists():
+        return  # let oculus_reader's own error handling take over
+
+    with apk_path.open("rb") as f:
+        header = f.read(len(_APK_ZIP_MAGIC))
+    if header == _APK_ZIP_MAGIC:
+        return  # already the real APK
+
+    urllib.request.urlretrieve(_APK_LFS_MEDIA_URL, apk_path)
 
 _AXIS_REMAP = np.array(
     [
@@ -87,6 +118,7 @@ class QuestReader:
     def __init__(self, ip_address: str | None = None) -> None:
         from oculus_reader.reader import OculusReader  # noqa: PLC0415
 
+        _ensure_real_apk()
         self._reader = OculusReader(ip_address=ip_address)
 
     def read(self) -> dict[str, ControllerState]:
