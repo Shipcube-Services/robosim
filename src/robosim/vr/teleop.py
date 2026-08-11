@@ -73,6 +73,12 @@ class ArmTeleop:
         ee_pos, ee_quat = _site_pose(data, self.site_id)
         self.clutch.initialize(ee_pos, ee_quat)
 
+    def reinitialize(self, data: mujoco.MjData) -> None:
+        """Re-anchor the clutch to the arm's current pose (e.g. after a GUI reset)."""
+        ee_pos, ee_quat = _site_pose(data, self.site_id)
+        self.clutch.engaged = False
+        self.clutch.initialize(ee_pos, ee_quat)
+
     def step(self, mapper: JointResolver, data: mujoco.MjData, controller) -> None:
         if not controller.valid:
             return  # tracking lost: hold the last commanded pose
@@ -99,15 +105,30 @@ def run(xml_path: str, reader: QuestPoseSource, scale: float) -> None:
         viewer.cam.azimuth = model.vis.global_.azimuth
         viewer.cam.elevation = model.vis.global_.elevation
 
+        last_time = data.time
         try:
             while viewer.is_running():
                 step_start = time.time()
 
                 controllers = reader.read()
-                for segment in _SEGMENTS:
-                    arms[segment].step(mapper, data, controllers[segment])
+                # The GUI (e.g. its Reset button) mutates the same `data` from
+                # its own thread; without this lock that races with our ctrl
+                # writes and mj_step below, which can look like erratic or
+                # looping motion.
+                with viewer.lock():
+                    if data.time < last_time:
+                        # data.time only rewinds if something outside this loop
+                        # (e.g. the GUI's Reset button) reset the simulation;
+                        # re-anchor the clutch so arms don't snap back toward a
+                        # now-stale pre-reset target.
+                        for segment in _SEGMENTS:
+                            arms[segment].reinitialize(data)
 
-                mujoco.mj_step(model, data)
+                    for segment in _SEGMENTS:
+                        arms[segment].step(mapper, data, controllers[segment])
+                    mujoco.mj_step(model, data)
+                    last_time = data.time
+
                 elapsed = time.time() - step_start
                 time.sleep(max(0, model.opt.timestep - elapsed))
                 viewer.sync()
